@@ -2,11 +2,11 @@
 
 const { exec } = require('child_process')
 const mqtt = require('mqtt')
+const request = require('request')
 const config = require('config')
 require('colors')
 
-const apiHost = config.get('api_host')
-const apiPort = config.get('api_port')
+const apiUrl = config.get('api_url')
 const mqttUrl = config.get('mqtt_url')
 const mqttUsername = config.get('mqtt_username')
 const mqttPassword = config.get('mqtt_password')
@@ -23,21 +23,27 @@ console.log(`Connecting to: ${mqttUrl} with username: ${mqttUsername}`.yellow)
 client.on('connect', () => console.log(`Connected to: ${mqttUrl}`.green))
 
 const publish = () => {
-  try {
-    const command = exec(`curl ${apiHost}:${apiPort}`)
-    command.stderr.on('data', stderr => console.log(`stderr: ${stderr}`))
+  request(apiUrl, (error, response, body) => {
+    const time = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
 
-    command.stdout.on('data', (stdout) => {
-      const json = JSON.parse(stdout)
-      const payload = JSON.stringify({ rig_uuid: rigUuid, payload: json })
-      const time = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
+    if(error) {
+      console.log(`[${time}] ${topic}: `.red + error)
+      return
+    }
 
+    if(!response) {
+      console.log(`[${time}] ${topic}: No response`.red)
+      return
+    }
+
+    if(response.statusCode == 200) {
+      const payload = JSON.stringify({ rig_uuid: rigUuid, payload: JSON.parse(body) })
       console.log(`[${time}] ${topic}: `.yellow + payload)
       client.publish(topic, payload)
-    })
-  } catch (e) {
-    console.log(`An error ocurred: ${e}`)
-  }
+    } else {
+      console.log(`[${time}] ${topic}: `.red + response.statusCode)
+    }
+  })
 }
 
 setInterval(() => publish(), delay)

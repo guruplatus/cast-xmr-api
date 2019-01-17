@@ -12,7 +12,8 @@
   "dependencies": {
     "colors": "latest",
     "config": "latest",
-    "mqtt": "latest"
+    "mqtt": "latest",
+    "request": "latest"
   },
   "devDependencies": {
     "eslint": "^5.12.0",
